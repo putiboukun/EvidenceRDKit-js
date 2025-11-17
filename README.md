@@ -2,6 +2,10 @@
 
 RDKit.js を Evidence プロジェクトや Svelte ページに組み込み、SMILES/Molblock 情報から分子構造を表示するためのコンポーネント集です。`components/` 以下の Svelte コンポーネントと、RDKit.js を CDN から遅延読み込みするユーティリティ (`utils/loadRDKit.js`) だけで完結しているため、既存の Evidence プロジェクトにそのまま取り込めます。
 
+<p align="center">
+<img src="demo.png" width="50%">
+</p>
+
 ## ディレクトリ構成
 
 | パス | 説明 |
