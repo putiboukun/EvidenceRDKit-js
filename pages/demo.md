@@ -1,5 +1,5 @@
 ---
-title: demo
+title: StructureDemo
 components:
   ChemicalStructure: ../components/ChemicalStructure.svelte
   MoleculeGallery: ../components/MoleculeGallery.svelte
