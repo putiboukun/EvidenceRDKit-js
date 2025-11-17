@@ -13,6 +13,7 @@ RDKit.js を Evidence プロジェクトや Svelte ページに組み込み、SM
 | `components/ChemicalStructure.svelte` | 単一分子の SVG レンダリング、SMILES と Molblock の両方をサポート。 |
 | `components/MoleculeGallery.svelte` | 複数分子をレスポンシブなグリッドで表示。未指定時はサンプル分子を表示。 |
 | `components/MoleculeTable.svelte` | テーブルの各行で分子構造を描画し、残りの列をそのまま表示。列推測やエラー表示も実装。 |
+| `components/ScatterStructurePlot.svelte` | 散布図と構造プレビューを連動させ、ポイントにフォーカスすると対応する分子を表示。 |
 | `utils/loadRDKit.js` | 主要 CDN 候補から RDKit.js を探し、初回アクセス時にロードして共有。 |
 
 ## 使い方
@@ -60,9 +61,29 @@ RDKit.js を Evidence プロジェクトや Svelte ページに組み込み、SM
   structureHeight={160}
 />
 ```
+
+### ScatterStructurePlot（散布図＋構造プレビュー）
+
+数値指標を縦横軸にとった散布図と、ホバー／フォーカス中のポイントの化学構造プレビューを 1 つのコンポーネントで表示できます。Evidence
+の SQL ブロックなどで取得した配列を `points` プロパティとして渡し、`xField` / `yField` / `smilesField` などで列名を指定してください。
+
+```svelte
+<ScatterStructurePlot
+  points={rows}
+  xField="logp"
+  yField="potency"
+  labelField="compound"
+  smilesField="smiles"
+  xLabel="LogP"
+  yLabel="Potency"
+  title="LogP vs Potency"
+  width={520}
+  height={340}
+/>
+```
 ## デモページ
 
-それぞれの表示例をdemo.mdに記載しています。コンポーネントとあわせてお使いのEvidenceプロジェクトに組み込むことで表示確認できるようになっています。
+それぞれの表示例（散布図と構造プレビューを含む）を demo.md に記載しています。コンポーネントとあわせてお使いの Evidence プロジェクトに組み込むことで表示確認できるようになっています。
 
 
 ## RDKit.js の読み込み戦略
