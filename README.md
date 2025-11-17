@@ -2,10 +2,6 @@
 
 RDKit.js を Evidence プロジェクトや Svelte ページに組み込み、SMILES/Molblock 情報から分子構造を表示するためのコンポーネント集です。`components/` 以下の Svelte コンポーネントと、RDKit.js を CDN から遅延読み込みするユーティリティ (`utils/loadRDKit.js`) だけで完結しているため、既存の Evidence プロジェクトにそのまま取り込めます。
 
-<p align="center">
-<img src="demo.png" width="50%">
-</p>
-
 ## ディレクトリ構成
 
 | パス | 説明 |
@@ -50,6 +46,10 @@ RDKit.js を Evidence プロジェクトや Svelte ページに組み込み、SM
 ```
 
 ### MoleculeTable（テーブル表示）
+
+Evidenceの SQL ブロックなどで取得した配列を`rows`ブロックとして渡し、化学構造を含んだ表を表示することができます。`smilesField`にsmilesを含む列を指定し、
+表示する列名を`columns`で指定してください。抽出された SQL ブロックが多数ある場合には表示件数を調整することも可能で、ダウンロードボタンからcsvとして保存することもできます。
+
 
 ```svelte
 <!-- rows は Evidence の SQL ブロックなどで取得した配列を想定 -->
