@@ -15,7 +15,7 @@
 
   const padding = { top: 20, right: 24, bottom: 48, left: 56 };
 
-  let hoveredPoint = null;
+  let selectedPoint = null;
 
   const sanitizeNumber = (value) => {
     const n = Number(value);
@@ -85,13 +85,14 @@
     return Number.parseFloat(value.toFixed(2));
   };
 
-  const handlePointerEnter = (point) => {
-    hoveredPoint = point;
+  const handleSelect = (point) => {
+    selectedPoint = point;
   };
 
-  const handlePointerLeave = (point) => {
-    if (hoveredPoint === point) {
-      hoveredPoint = null;
+  const handleKeydown = (event, point) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleSelect(point);
     }
   };
 </script>
@@ -110,7 +111,7 @@
         width={width}
         height={height}
         role="img"
-        aria-label={`${title || "scatterplot"}。ポイントにカーソルを合わせると構造が表示されます。`}
+        aria-label={`${title || "scatterplot"}。ポイントをクリックすると構造が表示されます。`}
       >
         <g transform={`translate(${padding.left},${padding.top})`}>
           <line
@@ -158,16 +159,14 @@
 
           {#each validPoints as point}
             <circle
-              class:active={hoveredPoint === point}
+              class:active={selectedPoint === point}
               cx={scaleValue(point.x, xMin, xMax, 0, width - padding.left - padding.right)}
               cy={scaleValue(point.y, yMax, yMin, 0, height - padding.top - padding.bottom)}
               r={pointRadius}
               tabindex="0"
-              aria-label={`${point.label || "ポイント"} (${xLabel}: ${point.x}, ${yLabel}: ${point.y})`}
-              on:focus={() => handlePointerEnter(point)}
-              on:blur={() => handlePointerLeave(point)}
-              on:mouseenter={() => handlePointerEnter(point)}
-              on:mouseleave={() => handlePointerLeave(point)}
+              aria-label={`${point.label || "ポイント"} (${xLabel}: ${point.x}, ${yLabel}: ${point.y})。クリックで構造を表示。`}
+              on:click={() => handleSelect(point)}
+              on:keydown={(event) => handleKeydown(event, point)}
             />
           {/each}
         </g>
@@ -188,20 +187,20 @@
       </svg>
 
       <div class="structure-panel">
-        {#if hoveredPoint}
+        {#if selectedPoint}
           <div class="structure-meta">
-            <h4>{hoveredPoint.label || "選択中のポイント"}</h4>
-            <p>{xLabel}: {hoveredPoint.x}</p>
-            <p>{yLabel}: {hoveredPoint.y}</p>
+            <h4>{selectedPoint.label || "選択中のポイント"}</h4>
+            <p>{xLabel}: {selectedPoint.x}</p>
+            <p>{yLabel}: {selectedPoint.y}</p>
           </div>
           <ChemicalStructure
-            smiles={hoveredPoint.smiles}
+            smiles={selectedPoint.smiles}
             width={200}
             height={160}
             title=""
           />
         {:else}
-          <p class="hint">ポイントにカーソルを合わせると対応する化学構造が表示されます。</p>
+          <p class="hint">ポイントをクリックすると対応する化学構造が表示されます。</p>
         {/if}
       </div>
     </div>

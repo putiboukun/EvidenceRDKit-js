@@ -50,7 +50,7 @@ select 'Acetaminophen', 'Pain Reliever', 'CC(=O)NC1=CC=C(C=C1)O'
 
 ## 散布図と連動した化学構造プレビュー
 
-`ScatterStructurePlot`を使うと、散布図のポイントにマウスオーバーするだけで該当レコードの化学構造を横に表示できます。例えば以下では、`potency` と `logp` を縦横軸に、`smiles` 列を構造描画に利用しています。
+`ScatterStructurePlot`を使うと、散布図のポイントをクリックするだけで該当レコードの化学構造を横に表示できます。例えば以下では、`potency` と `logp` を縦横軸に、`smiles` 列を構造描画に利用しています。
 
 ```sql potency_map
 select 'Aspirin' as compound, 5.5 as potency, 1.2 as logp, 'CC(=O)Oc1ccccc1C(=O)O' as smiles
