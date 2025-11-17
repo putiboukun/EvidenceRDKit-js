@@ -7,6 +7,8 @@
   export let columns = [];
   export let structureWidth = 180;
   export let structureHeight = 140;
+  export let rowsPerPageOptions = [5, 10, 25, 50];
+  export let initialRowsPerPage = 10;
 
   let renderedRows = [];
   let displayColumns = [];
@@ -16,9 +18,44 @@
   let renderToken = 0;
   let isDestroyed = false;
   const defaultFileName = "molecule-table.csv";
+  let currentPage = 1;
+  let rowsPerPage = initialRowsPerPage;
+  let totalRows = 0;
+  let totalPages = 1;
+  let paginatedRows = [];
+  let visibleRangeStart = 0;
+  let visibleRangeEnd = 0;
+  let normalizedRowsPerPageOptions = [];
+  let previousRowsRef = rows;
 
   const normalizeColumns = (cols) =>
     Array.isArray(cols) ? cols.filter(Boolean) : [];
+
+  const normalizePerPageOptions = (options) => {
+    if (!Array.isArray(options) || options.length === 0) {
+      return [initialRowsPerPage];
+    }
+    const unique = Array.from(
+      new Set(
+        options
+          .map((value) => Number(value))
+          .filter((value) => Number.isFinite(value) && value > 0)
+      )
+    );
+    return unique.length > 0 ? unique.sort((a, b) => a - b) : [initialRowsPerPage];
+  };
+
+  const normalizeRowsPerPage = (value, options) => {
+    if (!Number.isFinite(value) || value <= 0) {
+      return options[0];
+    }
+    if (!options.includes(value)) {
+      return options.reduce((closest, option) => {
+        return Math.abs(option - value) < Math.abs(closest - value) ? option : closest;
+      }, options[0]);
+    }
+    return value;
+  };
 
   async function renderRows(rowsValue) {
     const currentToken = ++renderToken;
@@ -115,8 +152,37 @@
     columnCount = 1 + displayColumns.length;
   }
 
+  $: normalizedRowsPerPageOptions = normalizePerPageOptions(rowsPerPageOptions);
+  $: rowsPerPage = normalizeRowsPerPage(rowsPerPage, normalizedRowsPerPageOptions);
+
+  $: if (rows !== previousRowsRef) {
+    previousRowsRef = rows;
+    currentPage = 1;
+  }
+
+  $: totalRows = Array.isArray(rows) ? rows.length : 0;
+  $: totalPages = rowsPerPage > 0 ? Math.max(1, Math.ceil(totalRows / rowsPerPage)) : 1;
+  $: if (currentPage > totalPages) {
+    currentPage = totalPages;
+  }
+
+  $:
+    paginatedRows = Array.isArray(rows)
+      ? rows.slice((currentPage - 1) * rowsPerPage, (currentPage - 1) * rowsPerPage + rowsPerPage)
+      : [];
+
+  $: {
+    if (totalRows === 0) {
+      visibleRangeStart = 0;
+      visibleRangeEnd = 0;
+    } else {
+      visibleRangeStart = (currentPage - 1) * rowsPerPage + 1;
+      visibleRangeEnd = Math.min(currentPage * rowsPerPage, totalRows);
+    }
+  }
+
   $: if (!isDestroyed) {
-    renderRows(rows);
+    renderRows(paginatedRows);
   }
 
   onDestroy(() => {
@@ -169,6 +235,26 @@
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
+
+  function goToPreviousPage() {
+    if (currentPage > 1) {
+      currentPage -= 1;
+    }
+  }
+
+  function goToNextPage() {
+    if (currentPage < totalPages) {
+      currentPage += 1;
+    }
+  }
+
+  function handleRowsPerPageChange(event) {
+    const nextValue = Number(event?.target?.value);
+    if (Number.isFinite(nextValue) && nextValue > 0) {
+      rowsPerPage = nextValue;
+      currentPage = 1;
+    }
+  }
 </script>
 
 <div
@@ -176,6 +262,16 @@
   style={`--structure-width: ${structureWidth}px; --structure-height: ${structureHeight}px;`}
 >
   <div class="table-actions">
+    <div class="rows-per-page-control">
+      <label>
+        Rows per page
+        <select value={rowsPerPage} on:change={handleRowsPerPageChange}>
+          {#each normalizedRowsPerPageOptions as option}
+            <option value={option} selected={option === rowsPerPage}>{option}</option>
+          {/each}
+        </select>
+      </label>
+    </div>
     <button
       type="button"
       class="download-button"
@@ -234,6 +330,25 @@
       </tbody>
     </table>
   </div>
+
+  <div class="pagination" aria-live="polite">
+    <div class="pagination-info">
+      {#if totalRows === 0}
+        No records to display
+      {:else}
+        Showing {visibleRangeStart} - {visibleRangeEnd} of {totalRows}
+      {/if}
+    </div>
+    <div class="pagination-controls">
+      <button type="button" on:click={goToPreviousPage} disabled={currentPage <= 1}>
+        Prev
+      </button>
+      <span class="pagination-status">Page {currentPage} / {totalPages}</span>
+      <button type="button" on:click={goToNextPage} disabled={currentPage >= totalPages}>
+        Next
+      </button>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -245,7 +360,24 @@
 
   .table-actions {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .rows-per-page-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+  }
+
+  .rows-per-page-control select {
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.4rem;
+    border: 1px solid var(--evidence-border-color, #d7dce0);
+    font-size: 0.9rem;
   }
 
   .download-button {
@@ -361,6 +493,54 @@
     font-weight: 600;
   }
 
+  .pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .pagination-info {
+    font-weight: 600;
+    color: #475569;
+  }
+
+  .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .pagination-controls button {
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.85rem;
+    background: #1e293b;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .pagination-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .pagination-controls button:not(:disabled):hover {
+    opacity: 0.85;
+  }
+
+  .pagination-controls button:not(:disabled):active {
+    transform: scale(0.98);
+  }
+
+  .pagination-status {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
   @media (max-width: 768px) {
     .molecule-table {
       min-width: 100%;
@@ -369,6 +549,11 @@
     th,
     td {
       padding: 0.5rem 0.75rem;
+    }
+
+    .pagination {
+      flex-direction: column;
+      align-items: flex-start;
     }
   }
 </style>
