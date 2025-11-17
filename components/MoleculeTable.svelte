@@ -182,7 +182,7 @@
       on:click={handleDownloadCsv}
       disabled={isLoading || renderedRows.length === 0}
     >
-      CSVダウンロード
+      Download
     </button>
   </div>
   {#if loadError}
