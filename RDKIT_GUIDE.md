@@ -62,7 +62,7 @@ SQLクエリなどから取得した表形式データの`smiles`列を基に、
 
 **例:**
 ```markdown
-```sql molecule_library
+sql molecule_library
 select 'Aspirin' as name, 'Pain Reliever' as category, 'CC(=O)Oc1ccccc1C(=O)O' as smiles
 ```
 ```
@@ -84,13 +84,13 @@ select 'Aspirin' as name, 'Pain Reliever' as category, 'CC(=O)Oc1ccccc1C(=O)O' a
 
 **例:**
 ```markdown
-```sql potency_map
+sql potency_map
 select 'Aspirin' as compound, 5.5 as potency, 1.2 as logp, 'CC(=O)Oc1ccccc1C(=O)O' as smiles
 union all select 'Caffeine', 7.8, -0.1, 'Cn1cnc2c1c(=O)n(C)c(=O)n2C'
 union all select 'Ibuprofen', 6.8, 3.5, 'CC(C)CC1=CC=C(C=C1)[C@@H](C)C(=O)O'
 union all select 'Nicotine', 6.2, 1.0, 'CN1CCC[C@H]1c2cccnc2'
 ```
-
+```
 <ScatterStructurePlot
   points={potency_map}
   xField="logp"
