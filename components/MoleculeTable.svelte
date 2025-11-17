@@ -143,7 +143,7 @@
     <table class="molecule-table">
       <thead>
         <tr>
-          <th scope="col" class="structure-header">構造</th>
+          <th scope="col" class="structure-header">Structure</th>
           {#each displayColumns as column}
             <th scope="col">{column}</th>
           {/each}
