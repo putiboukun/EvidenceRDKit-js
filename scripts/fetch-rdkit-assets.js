@@ -1,11 +1,15 @@
 #!/usr/bin/env node
-const fs = require('node:fs/promises');
-const path = require('node:path');
-const https = require('node:https');
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import https from 'node:https';
+import { fileURLToPath } from 'node:url';
 
 const VERSION = process.argv[2] || '2024.3.5-1.0.0';
 const CDN_BASE = `https://unpkg.com/@rdkit/rdkit@${VERSION}/dist/`;
 const FILES = ['RDKit_minimal.js', 'RDKit_minimal.wasm'];
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function fetchBuffer(url, redirectCount = 0) {
   return new Promise((resolve, reject) => {
