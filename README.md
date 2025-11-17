@@ -110,7 +110,3 @@ Evidenceの SQL ブロックなどで取得した配列を`rows`ブロックと�
 | CDN からの読み込みに失敗する | ファイアウォールや CSP 設定で `unpkg.com` / `cdn.jsdelivr.net` が許可されているか確認。必要に応じて `utils/loadRDKit.js` の候補 URL を追加。 |
 
 詳細なサンプルや SMILES の例は `RDKIT_GUIDE.md` を参照してください。
-
-## ライセンス
-
-本リポジトリは MIT License の下で提供されています。RDKit.js 自体のライセンス条件についても別途ご確認ください。
