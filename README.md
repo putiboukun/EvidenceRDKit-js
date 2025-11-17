@@ -16,7 +16,7 @@ RDKit.js を Evidence プロジェクトや Svelte ページに組み込み、SM
 
 1. Evidence プロジェクト（`/components` と `/utils` を配置できる構成）に本リポジトリの対応ディレクトリをコピーします。
 2. Evidence の Markdown ページや Svelte ファイルで必要なコンポーネントを `import` し、SMILES/Molblock データを渡します。
-3. ブラウザで初めてコンポーネントがマウントされた際に `loadRDKit()` が実行され、利用可能な CDN から RDKit.js/WASM を自動取得します。
+3. ブラウザで初めてコンポーネントがマウントされた際に `loadRDKit()` が実行され、`public/rdkit` 以下に配置されたローカルの RDKit.js/WASM か、利用可能な CDN から RDKit.js/WASM を自動取得します。
 
 ```svelte
 <!-- 例: ChemicalStructure コンポーネント -->
@@ -48,7 +48,7 @@ RDKit.js を Evidence プロジェクトや Svelte ページに組み込み、SM
 ### MoleculeTable（テーブル表示）
 
 Evidenceの SQL ブロックなどで取得した配列を`rows`ブロックとして渡し、化学構造を含んだ表を表示することができます。抽出された SQL ブロックが多数ある場合には表示件数を
-調整することも可能で、ダウンロードボタンからcsvとして保存することもできます。
+調整することも可能です。
 
 
 ```svelte
@@ -91,9 +91,12 @@ Evidenceの SQL ブロックなどで取得した配列を`rows`ブロックと�
 
 ## RDKit.js の読み込み戦略
 
-- `loadRDKit()` は `unpkg` や `jsDelivr` の複数 CDN を順番に試行し、`initRDKitModule` が成功するまで繰り返します。
+- `loadRDKit()` はまず `./rdkit/`（ビルド済みサイトと同じ階層に出力される `public/rdkit` ディレクトリ）に配置された `RDKit_minimal.js` / `RDKit_minimal.wasm` を探しに行きます。`node scripts/fetch-rdkit-assets.js` を実行すると、必要な 2 ファイルが自動的に配置されます。
+- ローカルディレクトリにファイルが存在しない場合は、従来通り `unpkg` や `jsDelivr` の複数 CDN を順番に試行し、`initRDKitModule` が成功するまで繰り返します。
 - 成功時にはモジュールを `window.__rdkitModule` にキャッシュし、以降の描画では即座に再利用されます。
 - サーバーサイド（Evidence のデータ準備フェーズなど）で呼び出された場合は明示的にエラーを返し、ブラウザでのみ実行されるようにしています。
+
+> ヒント: 静的ホスティング環境で `rdkit` ディレクトリを別パスに配置したい場合は、`<meta name="rdkit-base" content="/custom/rdkit/">` を挿入するか `window.__RDKitBasePath = '/custom/rdkit/';` を `loadRDKit()` を呼ぶ前に実行してください。
 
 ## エラーハンドリングとアクセシビリティ
 

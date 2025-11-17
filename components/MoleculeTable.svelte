@@ -17,7 +17,6 @@
   let isLoading = false;
   let renderToken = 0;
   let isDestroyed = false;
-  const defaultFileName = "molecule-table.csv";
   let currentPage = 1;
   let rowsPerPage = initialRowsPerPage;
   let totalRows = 0;
@@ -197,45 +196,6 @@
     return !Number.isNaN(Number(s.replace(/,/g, "")));
   }
 
-  const escapeCsvValue = (value) => {
-    if (value === null || value === undefined) return "";
-    const str = String(value);
-    if (/[",\n\r]/.test(str)) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  };
-
-  const buildCsvContent = () => {
-    const headers = [smilesField, ...displayColumns];
-    const lines = [];
-    lines.push(headers.map((header) => escapeCsvValue(header)).join(","));
-
-    renderedRows.forEach((item) => {
-      const rowValues = headers.map((key) => escapeCsvValue(item.row?.[key] ?? ""));
-      lines.push(rowValues.join(","));
-    });
-
-    return lines.join("\r\n");
-  };
-
-  function handleDownloadCsv() {
-    if (typeof window === "undefined" || renderedRows.length === 0) {
-      return;
-    }
-
-    const csv = buildCsvContent();
-    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = defaultFileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }
-
   function goToPreviousPage() {
     if (currentPage > 1) {
       currentPage -= 1;
@@ -272,14 +232,6 @@
         </select>
       </label>
     </div>
-    <button
-      type="button"
-      class="download-button"
-      on:click={handleDownloadCsv}
-      disabled={isLoading || renderedRows.length === 0}
-    >
-      Download
-    </button>
   </div>
   {#if loadError}
     <div class="load-error" role="alert">{loadError}</div>
@@ -378,30 +330,6 @@
     border-radius: 0.4rem;
     border: 1px solid var(--evidence-border-color, #d7dce0);
     font-size: 0.9rem;
-  }
-
-  .download-button {
-    border: none;
-    border-radius: 0.5rem;
-    padding: 0.5rem 1.25rem;
-    background: #0f172a;
-    color: #fff;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-  }
-
-  .download-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .download-button:not(:disabled):hover {
-    opacity: 0.85;
-  }
-
-  .download-button:not(:disabled):active {
-    transform: scale(0.98);
   }
 
   .table-wrapper {
