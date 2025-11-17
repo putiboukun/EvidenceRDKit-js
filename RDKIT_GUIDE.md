@@ -69,6 +69,41 @@ select 'Aspirin' as name, 'Pain Reliever' as category, 'CC(=O)Oc1ccccc1C(=O)O' a
 <MoleculeTable rows={molecule_library} smilesField="smiles" columns={["name", "category"]} />
 ```
 
+### 4. ScatterStructurePlot.svelte
+
+散布図と化学構造プレビューを 1 つのビューにまとめ、ホバー／フォーカス中のポイントを RDKit.js で描画した構造に紐付けられます。Evidence の SQL ブロックなどで取得した行配列をそのまま渡せるため、薬効や物性指標を視覚的に比較しながら構造を確認する用途に便利です。
+
+**プロパティ:**
+- `points` (array): 散布図に描画するレコード配列
+- `xField` / `yField` (string): 横軸・縦軸として使用する列名
+- `labelField` (string): ポイントのラベルに利用する列名（任意）
+- `smilesField` (string): プレビューする SMILES 列名
+- `title`, `xLabel`, `yLabel` (string): 見出しや軸ラベルのカスタマイズ
+- `width`, `height`, `pointRadius` (number): SVG 散布図のサイズやポイント半径
+
+**例:**
+```markdown
+```sql potency_map
+select 'Aspirin' as compound, 5.5 as potency, 1.2 as logp, 'CC(=O)Oc1ccccc1C(=O)O' as smiles
+union all select 'Caffeine', 7.8, -0.1, 'Cn1cnc2c1c(=O)n(C)c(=O)n2C'
+union all select 'Ibuprofen', 6.8, 3.5, 'CC(C)CC1=CC=C(C=C1)[C@@H](C)C(=O)O'
+union all select 'Nicotine', 6.2, 1.0, 'CN1CCC[C@H]1c2cccnc2'
+```
+
+<ScatterStructurePlot
+  points={potency_map}
+  xField="logp"
+  yField="potency"
+  labelField="compound"
+  smilesField="smiles"
+  xLabel="LogP"
+  yLabel="Potency"
+  title="LogP vs Potency"
+  width={520}
+  height={340}
+/>
+```
+
 ## SMILES表記の例
 
 - `CCO` - エタノール
