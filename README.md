@@ -10,7 +10,6 @@ RDKit.js を Evidence プロジェクトや Svelte ページに組み込み、SM
 | `components/MoleculeGallery.svelte` | 複数分子をレスポンシブなグリッドで表示。未指定時はサンプル分子を表示。 |
 | `components/MoleculeTable.svelte` | テーブルの各行で分子構造を描画し、残りの列をそのまま表示。列推測やエラー表示も実装。 |
 | `utils/loadRDKit.js` | 主要 CDN 候補から RDKit.js を探し、初回アクセス時にロードして共有。 |
-| `RDKIT_GUIDE.md` | それぞれのコンポーネントの詳細な使い方と SMILES 例。 |
 
 ## 使い方
 
@@ -57,6 +56,10 @@ RDKit.js を Evidence プロジェクトや Svelte ページに組み込み、SM
   structureHeight={160}
 />
 ```
+## デモページ
+
+それぞれの表示例をdemo.mdに記載しています。お使いのEvidence環境に組み込むことで確認できるようになっています。
+
 
 ## RDKit.js の読み込み戦略
 
