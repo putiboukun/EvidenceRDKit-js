@@ -256,6 +256,8 @@
     fill: #1e88e5;
     opacity: 0.8;
     cursor: pointer;
+    transform-box: fill-box;
+    transform-origin: center;
     transition: transform 0.15s ease, opacity 0.15s ease;
   }
 
