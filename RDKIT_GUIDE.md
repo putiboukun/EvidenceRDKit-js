@@ -80,6 +80,7 @@ select 'Aspirin' as name, 'Pain Reliever' as category, 'CC(=O)Oc1ccccc1C(=O)O' a
 - `smilesField` (string): プレビューする SMILES 列名
 - `title`, `xLabel`, `yLabel` (string): 見出しや軸ラベルのカスタマイズ
 - `width`, `height`, `pointRadius` (number): SVG 散布図のサイズやポイント半径
+- `backgroundColor`, `pointColor` (string): プロット背景とポイントのカラーリング
 
 **例:**
 ```markdown
@@ -101,6 +102,8 @@ union all select 'Nicotine', 6.2, 1.0, 'CN1CCC[C@H]1c2cccnc2'
   title="LogP vs Potency"
   width={520}
   height={340}
+  backgroundColor="#f9fbff"
+  pointColor="#d81b60"
 />
 ```
 

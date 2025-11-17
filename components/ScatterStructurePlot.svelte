@@ -9,6 +9,8 @@
   export let width = 520;
   export let height = 360;
   export let pointRadius = 6;
+  export let backgroundColor = "#fff";
+  export let pointColor = "#1e88e5";
   export let title = "";
   export let xLabel = "X";
   export let yLabel = "Y";
@@ -111,6 +113,7 @@
         width={width}
         height={height}
         role="img"
+        style={`background-color:${backgroundColor};`}
         aria-label={`${title || "scatterplot"}。ポイントをクリックすると構造が表示されます。`}
       >
         <g transform={`translate(${padding.left},${padding.top})`}>
@@ -165,6 +168,7 @@
               r={pointRadius}
               tabindex="0"
               aria-label={`${point.label || "ポイント"} (${xLabel}: ${point.x}, ${yLabel}: ${point.y})。クリックで構造を表示。`}
+              style={`--point-color:${pointColor};`}
               on:click={() => handleSelect(point)}
               on:keydown={(event) => handleKeydown(event, point)}
             />
@@ -226,7 +230,6 @@
 
   svg {
     border: 1px solid #e0e0e0;
-    background-color: #fff;
     border-radius: 8px;
   }
 
@@ -253,7 +256,7 @@
   }
 
   circle {
-    fill: #1e88e5;
+    fill: var(--point-color, #1e88e5);
     opacity: 0.8;
     cursor: pointer;
     transform-box: fill-box;

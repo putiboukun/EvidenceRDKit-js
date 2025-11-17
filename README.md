@@ -66,6 +66,7 @@ RDKit.js を Evidence プロジェクトや Svelte ページに組み込み、SM
 
 数値指標を縦横軸にとった散布図と、クリックで選択したポイントの化学構造プレビューを 1 つのコンポーネントで表示できます。Evidence
 の SQL ブロックなどで取得した配列を `points` プロパティとして渡し、`xField` / `yField` / `smilesField` などで列名を指定してください。
+`backgroundColor` や `pointColor` を使えば、背景やポイントの色味もブランドカラーに合わせて調整できます。
 
 ```svelte
 <ScatterStructurePlot
@@ -79,6 +80,8 @@ RDKit.js を Evidence プロジェクトや Svelte ページに組み込み、SM
   title="LogP vs Potency"
   width={520}
   height={340}
+  backgroundColor="#f9fbff"
+  pointColor="#d81b60"
 />
 ```
 ## デモページ
