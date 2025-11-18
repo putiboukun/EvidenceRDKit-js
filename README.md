@@ -9,8 +9,9 @@ RDKit.js を Evidence プロジェクトや Svelte ページに組み込み、SM
 | `components/ChemicalStructure.svelte` | 単一分子の SVG レンダリング、SMILES と Molblock の両方をサポート。 |
 | `components/MoleculeGallery.svelte` | 複数分子をレスポンシブなグリッドで表示。未指定時はサンプル分子を表示。 |
 | `components/MoleculeTable.svelte` | テーブルの各行で分子構造を描画し、残りの列をそのまま表示。列推測やエラー表示も実装。 |
-| `components/ScatterStructurePlot.svelte` | 散布図と構造プレビューを連動させ、ポイントをクリックすると対応する分子を表示。 |
+| `components/ScatterStructurePlot.svelte` | Evidence 標準の ScatterPlot と同じ描画体験を維持しつつ、ホバー時のポップアップに RDKit.js で描いた構造を表示。 |
 | `utils/loadRDKit.js` | 主要 CDN 候補から RDKit.js を探し、初回アクセス時にロードして共有。 |
+| `utils/loadPlotly.js` | Plotly.js を CDN から安全に読み込み、ScatterStructurePlot で再利用。 |
 
 ## 使い方
 
@@ -62,11 +63,10 @@ Evidenceの SQL ブロックなどで取得した配列を`rows`ブロックと�
 />
 ```
 
-### ScatterStructurePlot（散布図＋構造プレビュー）
+### ScatterStructurePlot（Plotly ベースの散布図＋構造ツールチップ）
 
-数値指標を縦横軸にとった散布図と、クリックで選択したポイントの化学構造プレビューを 1 つのコンポーネントで表示できます。Evidence
-の SQL ブロックなどで取得した配列を `points` プロパティとして渡し、`xField` / `yField` / `smilesField` などで列名を指定してください。
-`backgroundColor` や `pointColor` を使えば、背景やポイントの色味もブランドカラーに合わせて調整できます。
+Evidence 標準の ScatterPlot と同じく Plotly.js を用いて散布図を描画し、マウスオーバー時のポップアップに RDKit.js で描いた構造 SVG を表示します。Evidence の SQL ブロックなどで取得した配列を `points` プロパティとして渡し、`xField` / `yField` / `smilesField` などで列名を指定してください。
+ホバー中のカードには `ChemicalStructure` コンポーネントを再利用しているため、`tooltipStructureWidth` / `tooltipStructureHeight` で構造プレビューの大きさを細かく調整できます。`backgroundColor` や `pointColor` を使えば、Plotly グラフの色味もブランドカラーに合わせて統一できます。
 
 ```svelte
 <ScatterStructurePlot
@@ -82,6 +82,8 @@ Evidenceの SQL ブロックなどで取得した配列を`rows`ブロックと�
   height={340}
   backgroundColor="#f9fbff"
   pointColor="#d81b60"
+  tooltipStructureWidth={220}
+  tooltipStructureHeight={180}
 />
 ```
 ## デモページ

@@ -1,5 +1,7 @@
 <script>
+  import { onDestroy, onMount } from "svelte";
   import ChemicalStructure from "./ChemicalStructure.svelte";
+  import { loadPlotly } from "../utils/loadPlotly.js";
 
   export let points = [];
   export let xField = "x";
@@ -14,89 +16,187 @@
   export let title = "";
   export let xLabel = "X";
   export let yLabel = "Y";
+  export let tooltipStructureWidth = 200;
+  export let tooltipStructureHeight = 160;
 
-  const padding = { top: 20, right: 24, bottom: 48, left: 56 };
-
-  let selectedPoint = null;
+  let plotHost;
+  let isMounted = false;
+  let renderToken = 0;
+  let hoveredPoint = null;
+  let tooltipPosition = { left: 0, top: 0 };
+  let isRendering = false;
+  let plotError = "";
+  let hoverHandlersAttached = false;
+  let plotlyModule = null;
 
   const sanitizeNumber = (value) => {
     const n = Number(value);
     return Number.isFinite(n) ? n : null;
   };
 
-  const getExtent = (values) => {
-    if (!values.length) {
-      return [0, 1];
-    }
+  $: validPoints = (points ?? [])
+    .map((point) => ({
+      raw: point,
+      x: sanitizeNumber(point?.[xField]),
+      y: sanitizeNumber(point?.[yField]),
+      label: point?.[labelField] ?? "",
+      smiles: point?.[smilesField] ?? ""
+    }))
+    .filter((point) => point.x !== null && point.y !== null && point.smiles);
 
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-
-    if (min === max) {
-      const delta = Math.abs(min) || 1;
-      return [min - delta, max + delta];
-    }
-
-    return [min, max];
+  const resetTooltip = () => {
+    hoveredPoint = null;
   };
 
-  const scaleValue = (value, domainMin, domainMax, rangeMin, rangeMax) => {
-    if (domainMax === domainMin) return (rangeMin + rangeMax) / 2;
-    const ratio = (value - domainMin) / (domainMax - domainMin);
-    return rangeMin + ratio * (rangeMax - rangeMin);
-  };
+  function estimateTooltipSize() {
+    const estimatedWidth = tooltipStructureWidth + 96;
+    const estimatedHeight = tooltipStructureHeight + 140;
+    return { estimatedWidth, estimatedHeight };
+  }
 
-  $: validPoints = (points ?? []).map((point) => ({
-    raw: point,
-    x: sanitizeNumber(point?.[xField]),
-    y: sanitizeNumber(point?.[yField]),
-    label: point?.[labelField] ?? "",
-    smiles: point?.[smilesField] ?? ""
-  })).filter((point) => point.x !== null && point.y !== null && point.smiles);
+  function updateTooltipPosition(clientX, clientY) {
+    if (!plotHost) return;
+    const bounds = plotHost.getBoundingClientRect();
+    const offsetX = clientX - bounds.left + 12;
+    const offsetY = clientY - bounds.top + 12;
+    const { estimatedWidth, estimatedHeight } = estimateTooltipSize();
 
-  $: xValues = validPoints.map((point) => point.x);
-  $: yValues = validPoints.map((point) => point.y);
+    let left = offsetX;
+    let top = offsetY;
 
-  $: [xMin, xMax] = getExtent(xValues);
-  $: [yMin, yMax] = getExtent(yValues);
-
-  const tickCount = 5;
-
-  const buildTicks = (min, max) => {
-    if (min === max) {
-      return [min];
+    if (left + estimatedWidth > bounds.width) {
+      left = Math.max(8, bounds.width - estimatedWidth - 8);
     }
 
-    const ticks = [];
-    const step = (max - min) / (tickCount - 1);
-
-    for (let i = 0; i < tickCount; i++) {
-      ticks.push(min + step * i);
+    if (top + estimatedHeight > bounds.height) {
+      top = Math.max(8, bounds.height - estimatedHeight - 8);
     }
 
-    return ticks;
-  };
+    tooltipPosition = { left, top };
+  }
 
-  $: xTicks = buildTicks(xMin, xMax);
-  $: yTicks = buildTicks(yMin, yMax);
-
-  const formatTick = (value) => {
-    if (Math.abs(value) >= 1000 || Math.abs(value) < 0.01) {
-      return value.toExponential(1);
+  function bindHoverEvents() {
+    if (!plotHost?.on || hoverHandlersAttached) {
+      return;
     }
-    return Number.parseFloat(value.toFixed(2));
-  };
 
-  const handleSelect = (point) => {
-    selectedPoint = point;
-  };
+    plotHost.on("plotly_hover", (eventData) => {
+      const point = eventData?.points?.[0];
+      if (!point) return;
+      const hovered = validPoints[point.pointIndex];
+      if (!hovered) return;
+      hoveredPoint = hovered;
+      const clientX = eventData.event?.clientX ?? 0;
+      const clientY = eventData.event?.clientY ?? 0;
+      updateTooltipPosition(clientX, clientY);
+    });
 
-  const handleKeydown = (event, point) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      handleSelect(point);
+    plotHost.on("plotly_unhover", () => {
+      hoveredPoint = null;
+    });
+
+    hoverHandlersAttached = true;
+  }
+
+  function teardownPlot() {
+    if (plotlyModule && plotHost) {
+      plotlyModule.purge(plotHost);
     }
-  };
+    hoverHandlersAttached = false;
+    resetTooltip();
+  }
+
+  async function renderPlot() {
+    const requestId = ++renderToken;
+
+    if (!plotHost || !isMounted) {
+      return;
+    }
+
+    if (!validPoints.length) {
+      teardownPlot();
+      plotError = "";
+      return;
+    }
+
+    isRendering = true;
+    plotError = "";
+    resetTooltip();
+
+    try {
+      plotlyModule = await loadPlotly();
+      if (requestId !== renderToken) {
+        return;
+      }
+
+      const trace = {
+        x: validPoints.map((point) => point.x),
+        y: validPoints.map((point) => point.y),
+        text: validPoints.map((point) => point.label || ""),
+        mode: "markers",
+        type: "scattergl",
+        hoverinfo: "skip",
+        marker: {
+          size: Math.max(2, pointRadius * 2),
+          color: pointColor,
+          line: { width: 0 }
+        }
+      };
+
+      const layout = {
+        title: title || undefined,
+        xaxis: { title: xLabel },
+        yaxis: { title: yLabel },
+        plot_bgcolor: backgroundColor,
+        paper_bgcolor: backgroundColor,
+        margin: { t: title ? 56 : 32, r: 32, b: 56, l: 64 },
+        width,
+        height,
+        font: { family: "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif" }
+      };
+
+      const config = {
+        displayModeBar: false,
+        responsive: true
+      };
+
+      await plotlyModule.react(plotHost, [trace], layout, config);
+      bindHoverEvents();
+    } catch (error) {
+      if (requestId !== renderToken) {
+        return;
+      }
+      plotError = error?.message || "散布図の描画に失敗しました。Plotly の読み込み状況を確認してください。";
+    } finally {
+      if (requestId === renderToken) {
+        isRendering = false;
+      }
+    }
+  }
+
+  onMount(() => {
+    isMounted = true;
+    renderPlot();
+  });
+
+  onDestroy(() => {
+    isMounted = false;
+    teardownPlot();
+  });
+
+  $: if (isMounted) {
+    // 参照することで依存関係を追跡
+    validPoints;
+    xLabel;
+    yLabel;
+    title;
+    pointColor;
+    pointRadius;
+    width;
+    height;
+    backgroundColor;
+    renderPlot();
+  }
 </script>
 
 <div class="scatter-structure">
@@ -107,107 +207,46 @@
   {#if !validPoints.length}
     <div class="empty">表示可能なデータポイントがありません。</div>
   {:else}
-    <div class="plot-wrapper" style={`width:${width}px;`}>
-      <svg
-        class="plot"
-        width={width}
-        height={height}
+    <div
+      class="plot-container"
+      style={`width:${width ? `${width}px` : "100%"};height:${
+        height ? `${height}px` : "360px"
+      };--plot-background:${backgroundColor};`}
+    >
+      <div
+        class="plotly-host"
+        bind:this={plotHost}
         role="img"
-        style={`background-color:${backgroundColor};`}
-        aria-label={`${title || "scatterplot"}。ポイントをクリックすると構造が表示されます。`}
-      >
-        <g transform={`translate(${padding.left},${padding.top})`}>
-          <line
-            class="axis"
-            x1={0}
-            y1={height - padding.top - padding.bottom}
-            x2={width - padding.left - padding.right}
-            y2={height - padding.top - padding.bottom}
-          />
-          <line class="axis" x1={0} y1={0} x2={0} y2={height - padding.top - padding.bottom} />
+        aria-label={`${title || "scatterplot"}。ポイントにマウスオーバーすると構造プレビューが表示されます。`}
+      ></div>
 
-          {#each xTicks as tick}
-            {#if Number.isFinite(tick)}
-              <g
-                transform={`translate(${scaleValue(
-                  tick,
-                  xMin,
-                  xMax,
-                  0,
-                  width - padding.left - padding.right
-                )},${height - padding.top - padding.bottom})`}
-              >
-                <line class="tick" y2="6" />
-                <text class="tick-label x" y="20">{formatTick(tick)}</text>
-              </g>
-            {/if}
-          {/each}
-
-          {#each yTicks as tick}
-            {#if Number.isFinite(tick)}
-              <g
-                transform={`translate(0,${scaleValue(
-                  tick,
-                  yMax,
-                  yMin,
-                  0,
-                  height - padding.top - padding.bottom
-                )})`}
-              >
-                <line class="tick" x2="-6" />
-                <text class="tick-label y" x="-10" dy="0.32em">{formatTick(tick)}</text>
-              </g>
-            {/if}
-          {/each}
-
-          {#each validPoints as point}
-            <circle
-              class:active={selectedPoint === point}
-              cx={scaleValue(point.x, xMin, xMax, 0, width - padding.left - padding.right)}
-              cy={scaleValue(point.y, yMax, yMin, 0, height - padding.top - padding.bottom)}
-              r={pointRadius}
-              tabindex="0"
-              aria-label={`${point.label || "ポイント"} (${xLabel}: ${point.x}, ${yLabel}: ${point.y})。クリックで構造を表示。`}
-              style={`--point-color:${pointColor};`}
-              on:click={() => handleSelect(point)}
-              on:keydown={(event) => handleKeydown(event, point)}
-            />
-          {/each}
-        </g>
-
-        <text
-          class="axis-label"
-          x={padding.left + (width - padding.left - padding.right) / 2}
-          y={height - 10}
+      {#if hoveredPoint}
+        <div
+          class="structure-tooltip"
+          style={`left:${tooltipPosition.left}px;top:${tooltipPosition.top}px;`}
         >
-          {xLabel}
-        </text>
-        <text
-          class="axis-label"
-          transform={`translate(16,${padding.top + (height - padding.top - padding.bottom) / 2}) rotate(-90)`}
-        >
-          {yLabel}
-        </text>
-      </svg>
-
-      <div class="structure-panel">
-        {#if selectedPoint}
-          <div class="structure-meta">
-            <h4>{selectedPoint.label || "選択中のポイント"}</h4>
-            <p>{xLabel}: {selectedPoint.x}</p>
-            <p>{yLabel}: {selectedPoint.y}</p>
+          <div class="structure-tooltip__meta">
+            <strong>{hoveredPoint.label || "データポイント"}</strong>
+            <div>{xLabel}: {hoveredPoint.x}</div>
+            <div>{yLabel}: {hoveredPoint.y}</div>
           </div>
           <ChemicalStructure
-            smiles={selectedPoint.smiles}
-            width={200}
-            height={160}
+            smiles={hoveredPoint.smiles}
+            width={tooltipStructureWidth}
+            height={tooltipStructureHeight}
             title=""
           />
-        {:else}
-          <p class="hint">ポイントをクリックすると対応する化学構造が表示されます。</p>
-        {/if}
-      </div>
+        </div>
+      {/if}
+
+      {#if isRendering}
+        <div class="loading-overlay">描画中...</div>
+      {/if}
     </div>
+  {/if}
+
+  {#if plotError}
+    <div class="error">{plotError}</div>
   {/if}
 </div>
 
@@ -215,95 +254,65 @@
   .scatter-structure {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
   h3 {
     margin: 0;
+    font-size: 1.1rem;
   }
 
-  .plot-wrapper {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-
-  svg {
+  .plot-container {
+    position: relative;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--plot-background, #fff);
+    min-height: 320px;
   }
 
-  .axis {
-    stroke: #444;
-    stroke-width: 1;
+  .plotly-host {
+    width: 100%;
+    height: 100%;
   }
 
-  .tick {
-    stroke: #666;
-  }
-
-  .tick-label {
-    font-size: 0.75rem;
-    fill: #444;
-  }
-
-  .tick-label.x {
-    text-anchor: middle;
-  }
-
-  .tick-label.y {
-    text-anchor: end;
-  }
-
-  circle {
-    fill: var(--point-color, #1e88e5);
-    opacity: 0.8;
-    cursor: pointer;
-    transform-box: fill-box;
-    transform-origin: center;
-    transition: transform 0.15s ease, opacity 0.15s ease;
-  }
-
-  circle.active,
-  circle:focus,
-  circle:hover {
-    opacity: 1;
-    transform: scale(1.2);
-    outline: none;
-  }
-
-  .axis-label {
-    fill: #333;
-    font-weight: 600;
-    text-anchor: middle;
-  }
-
-  .structure-panel {
-    flex: 1;
+  .structure-tooltip {
+    position: absolute;
     min-width: 220px;
-    border: 1px solid #e0e0e0;
+    padding: 0.75rem;
     border-radius: 8px;
-    padding: 1rem;
-    background-color: #fafafa;
+    background-color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    z-index: 5;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    pointer-events: none;
+  }
+
+  .structure-tooltip__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    font-size: 0.85rem;
+    color: #374151;
+  }
+
+  .structure-tooltip__meta strong {
+    font-size: 0.95rem;
+    color: #111827;
+  }
+
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
     align-items: center;
     justify-content: center;
-  }
-
-  .structure-meta {
-    text-align: center;
-  }
-
-  .structure-meta h4 {
-    margin: 0 0 0.25rem;
-  }
-
-  .hint {
-    margin: 0;
-    color: #666;
-    text-align: center;
+    background: rgba(255, 255, 255, 0.65);
+    color: #555;
+    font-size: 0.95rem;
   }
 
   .empty {
@@ -312,5 +321,14 @@
     border-radius: 8px;
     text-align: center;
     color: #666;
+    background-color: #fafafa;
+  }
+
+  .error {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    background-color: #fff5f5;
+    border: 1px solid #fecaca;
+    color: #b91c1c;
   }
 </style>

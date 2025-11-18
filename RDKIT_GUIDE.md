@@ -71,7 +71,7 @@ select 'Aspirin' as name, 'Pain Reliever' as category, 'CC(=O)Oc1ccccc1C(=O)O' a
 
 ### 4. ScatterStructurePlot.svelte
 
-散布図と化学構造プレビューを 1 つのビューにまとめ、クリックで選択したポイントを RDKit.js で描画した構造に紐付けられます。Evidence の SQL ブロックなどで取得した行配列をそのまま渡せるため、薬効や物性指標を視覚的に比較しながら構造を確認する用途に便利です。
+Evidence 標準の Plotly ベース scatter plot をそのまま利用しつつ、マウスオーバー時のツールチップに RDKit.js で描画した構造を表示できます。SQL ブロックで取得した行配列を `points` に渡せば、薬効や物性指標を比較しながら構造を即座に確認できます。
 
 **プロパティ:**
 - `points` (array): 散布図に描画するレコード配列
@@ -79,8 +79,9 @@ select 'Aspirin' as name, 'Pain Reliever' as category, 'CC(=O)Oc1ccccc1C(=O)O' a
 - `labelField` (string): ポイントのラベルに利用する列名（任意）
 - `smilesField` (string): プレビューする SMILES 列名
 - `title`, `xLabel`, `yLabel` (string): 見出しや軸ラベルのカスタマイズ
-- `width`, `height`, `pointRadius` (number): SVG 散布図のサイズやポイント半径
+- `width`, `height`, `pointRadius` (number): Plotly グラフのサイズやポイント径
 - `backgroundColor`, `pointColor` (string): プロット背景とポイントのカラーリング
+- `tooltipStructureWidth`, `tooltipStructureHeight` (number): ホバー時に描画される構造プレビューのサイズ
 
 **例:**
 ```markdown
@@ -104,6 +105,8 @@ union all select 'Nicotine', 6.2, 1.0, 'CN1CCC[C@H]1c2cccnc2'
   height={340}
   backgroundColor="#f9fbff"
   pointColor="#d81b60"
+  tooltipStructureWidth={220}
+  tooltipStructureHeight={180}
 />
 ```
 
