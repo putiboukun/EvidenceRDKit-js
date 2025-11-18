@@ -1,10 +1,46 @@
-const CDN_CANDIDATES = [
+const REMOTE_CDN_CANDIDATES = [
   // try common CDN paths (unversioned -> latest)
   "https://unpkg.com/@rdkit/rdkit/dist/",
   "https://cdn.jsdelivr.net/npm/@rdkit/rdkit/dist/",
   // a known recent version as a fallback
   "https://unpkg.com/@rdkit/rdkit@2024.3.5-1.0.0/dist/",
 ];
+
+function ensureTrailingSlash(url) {
+  if (!url) return url;
+  return url.endsWith('/') ? url : `${url}/`;
+}
+
+function resolveLocalBase() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return null;
+  }
+
+  const override = window.__RDKitBasePath;
+  const metaBase = document.querySelector('meta[name="rdkit-base"]')?.content;
+  const rawBase = (override || metaBase || './rdkit/').trim();
+
+  try {
+    const baseHref = document.querySelector('base')?.href || window.location.href;
+    const resolved = new URL(rawBase, baseHref).toString();
+    return ensureTrailingSlash(resolved);
+  } catch (err) {
+    console.warn('Failed to resolve local RDKit base, falling back to remote CDN.', err);
+    if (rawBase.startsWith('http') || rawBase.startsWith('/')) {
+      return ensureTrailingSlash(rawBase);
+    }
+    return ensureTrailingSlash(`/${rawBase.replace(/^\/+/, '')}`);
+  }
+}
+
+function getCandidateBases() {
+  const candidates = [];
+  const localBase = resolveLocalBase();
+  if (localBase) {
+    candidates.push(localBase);
+  }
+  return candidates.concat(REMOTE_CDN_CANDIDATES);
+}
 
 let rdkitPromise;
 
@@ -79,7 +115,7 @@ export function loadRDKit() {
 
   rdkitPromise = (async () => {
     const errors = [];
-    for (const base of CDN_CANDIDATES) {
+    for (const base of getCandidateBases()) {
       try {
         console.log(`Attempting to load RDKit from ${base}`);
         const module = await tryInitFromBase(base);
